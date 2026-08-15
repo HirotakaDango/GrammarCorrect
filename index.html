@@ -1,0 +1,1325 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GrammarCorrect - AI Proofreading & Summary Assistant</title>
+    
+    <!-- Open Graph & Meta Tags -->
+    <meta property="og:title" content="GrammarCorrect - AI Proofreading & Summary Assistant">
+    <meta property="og:description" content="AI-powered grammar checker, proofreading assistant, and text summarizer.">
+    <meta property="og:image" content="https://icons.getbootstrap.com/assets/icons/spellcheck.svg">
+    <meta property="og:type" content="website">
+    <link rel="icon" type="image/svg+xml" href="https://icons.getbootstrap.com/assets/icons/spellcheck.svg">
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            colors: {
+              brand: {
+                50: '#eef2ff',
+                100: '#e0e7ff',
+                500: '#6366f1',
+                600: '#4f46e5',
+                700: '#4338ca',
+              }
+            }
+          }
+        }
+      }
+    </script>
+    
+    <!-- React & Babel -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <style>
+      body {
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        overflow: hidden;
+      }
+
+      .custom-scrollbar::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 9999px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+      }
+      .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #475569;
+      }
+      .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: #64748b;
+      }
+
+      /* Editor Issue Highlights */
+      .issue-highlight {
+        position: relative;
+        border-bottom-width: 2.5px;
+        border-bottom-style: solid;
+        border-radius: 3px;
+        cursor: pointer;
+        transition: all 0.15s ease-in-out;
+        padding: 1px 3px;
+      }
+
+      .issue-highlight.type-grammar {
+        background-color: rgba(254, 226, 226, 0.75);
+        border-bottom-color: #ef4444;
+      }
+      .issue-highlight.type-grammar:hover, .issue-highlight.active-target.type-grammar {
+        background-color: #fca5a5;
+        box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.25);
+      }
+
+      .issue-highlight.type-warning {
+        background-color: rgba(254, 243, 199, 0.85);
+        border-bottom-color: #f59e0b;
+      }
+      .issue-highlight.type-warning:hover, .issue-highlight.active-target.type-warning {
+        background-color: #fde68a;
+        box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.25);
+      }
+
+      .issue-highlight.type-style {
+        background-color: rgba(224, 231, 255, 0.75);
+        border-bottom-color: #6366f1;
+      }
+      .issue-highlight.type-style:hover, .issue-highlight.active-target.type-style {
+        background-color: #c7d2fe;
+        box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.25);
+      }
+
+      /* Dark Mode Highlights */
+      .dark .issue-highlight.type-grammar {
+        background-color: rgba(239, 68, 68, 0.25);
+        border-bottom-color: #f87171;
+      }
+      .dark .issue-highlight.type-grammar:hover, .dark .issue-highlight.active-target.type-grammar {
+        background-color: rgba(239, 68, 68, 0.45);
+      }
+
+      .dark .issue-highlight.type-warning {
+        background-color: rgba(245, 158, 11, 0.25);
+        border-bottom-color: #fbbf24;
+      }
+      .dark .issue-highlight.type-warning:hover, .dark .issue-highlight.active-target.type-warning {
+        background-color: rgba(245, 158, 11, 0.45);
+      }
+
+      .dark .issue-highlight.type-style {
+        background-color: rgba(99, 102, 241, 0.25);
+        border-bottom-color: #818cf8;
+      }
+      .dark .issue-highlight.type-style:hover, .dark .issue-highlight.active-target.type-style {
+        background-color: rgba(99, 102, 241, 0.45);
+      }
+
+      /* Editable Workspace Formatting */
+      #editor-content {
+        outline: none;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        min-height: 100%;
+      }
+
+      #editor-content[placeholder]:empty:before {
+        content: attr(placeholder);
+        color: #9ca3af;
+        pointer-events: none;
+        display: block;
+      }
+      .dark #editor-content[placeholder]:empty:before {
+        color: #6b7280;
+      }
+
+      @keyframes popIn {
+        0% { opacity: 0; transform: scale(0.95) translateY(4px); }
+        100% { opacity: 1; transform: scale(1) translateY(0); }
+      }
+      .animate-pop-in {
+        animation: popIn 0.15s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      }
+    </style>
+  </head>
+  <body class="bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 antialiased selection:bg-indigo-500 selection:text-white">
+    <div id="root"></div>
+
+    <script type="text/babel">
+      const OPFS_FILE_NAME = "grammarcorrect_draft.txt";
+
+      const saveToOPFS = async (content) => {
+        try {
+          if ('storage' in navigator && 'getDirectory' in navigator.storage) {
+            const root = await navigator.storage.getDirectory();
+            const fileHandle = await root.getFileHandle(OPFS_FILE_NAME, { create: true });
+            const writable = await fileHandle.createWritable();
+            await writable.write(content);
+            await writable.close();
+            return true;
+          }
+        } catch (err) {
+          console.warn("OPFS write fallback to localStorage:", err);
+        }
+        try {
+          localStorage.setItem(OPFS_FILE_NAME, content);
+        } catch(e) {}
+        return false;
+      };
+
+      const loadFromOPFS = async () => {
+        try {
+          if ('storage' in navigator && 'getDirectory' in navigator.storage) {
+            const root = await navigator.storage.getDirectory();
+            const fileHandle = await root.getFileHandle(OPFS_FILE_NAME, { create: false });
+            const file = await fileHandle.getFile();
+            return await file.text();
+          }
+        } catch (err) {}
+        try {
+          return localStorage.getItem(OPFS_FILE_NAME) || "";
+        } catch(e) {
+          return "";
+        }
+      };
+
+      const { useState, useEffect, useRef, useCallback, useMemo } = React;
+
+      const API_KEY = ""; // System injected dynamically at runtime
+      
+      const DEFAULT_SETTINGS = {
+        darkMode: false,
+        autoCheck: false,
+        tone: 'Professional',
+        apiKey: '',
+        model: 'gemini-3.7-flash'
+      };
+
+      const Icons = {
+        Check: ({ className = "h-4 w-4" }) => (
+          <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+          </svg>
+        ),
+        CheckDouble: ({ className = "h-4 w-4" }) => (
+          <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7m-14 6l4 4L19 7" />
+          </svg>
+        ),
+        Close: ({ className = "h-4 w-4" }) => (
+          <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+          </svg>
+        ),
+        Sun: () => (
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+          </svg>
+        ),
+        Moon: () => (
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+          </svg>
+        ),
+        Wand: () => (
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+          </svg>
+        ),
+        Sparkles: () => (
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+          </svg>
+        ),
+        Loading: () => (
+          <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+        ),
+        ChevronDown: ({ className = "h-4 w-4" }) => (
+          <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        ),
+        Copy: () => (
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+          </svg>
+        ),
+        Trash: () => (
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+          </svg>
+        ),
+        ArrowRight: () => (
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+          </svg>
+        ),
+        SidebarToggle: () => (
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
+          </svg>
+        ),
+        DocumentText: () => (
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+        )
+      };
+
+      const processAndDeduplicateIssues = (rawIssues, fullText) => {
+        if (!rawIssues || !Array.isArray(rawIssues) || !fullText) return [];
+
+        const processed = [];
+        const seenKeys = new Set();
+        const textSearchCursors = {};
+
+        rawIssues.forEach((issue, index) => {
+          if (!issue.originalText || typeof issue.originalText !== 'string') return;
+          
+          const orig = issue.originalText.trim();
+          if (!orig) return;
+
+          const issueKey = `${orig}__${issue.suggestion}__${issue.type}`;
+          if (seenKeys.has(issueKey)) return;
+
+          const startFrom = textSearchCursors[orig] || 0;
+          const foundIdx = fullText.indexOf(orig, startFrom);
+
+          if (foundIdx !== -1) {
+            const endIdx = foundIdx + orig.length;
+            textSearchCursors[orig] = endIdx;
+
+            const overlaps = processed.some(p => 
+              (foundIdx >= p.startIndex && foundIdx < p.endIndex) ||
+              (endIdx > p.startIndex && endIdx <= p.endIndex)
+            );
+
+            if (!overlaps) {
+              seenKeys.add(issueKey);
+              processed.push({
+                ...issue,
+                id: issue.id || `issue-${index}-${Date.now()}`,
+                originalText: orig,
+                suggestion: issue.suggestion || '',
+                explanation: issue.explanation || 'Suggested improvement.',
+                type: issue.type === 'grammar' ? 'grammar' : 'style',
+                severity: issue.severity || 'medium',
+                startIndex: foundIdx,
+                endIndex: endIdx
+              });
+            }
+          }
+        });
+
+        return processed.sort((a, b) => a.startIndex - b.startIndex);
+      };
+
+      const App = () => {
+        const [settings, setSettings] = useState(() => {
+          try {
+            const saved = localStorage.getItem('grammarcorrect_settings');
+            return saved ? { ...DEFAULT_SETTINGS, ...JSON.parse(saved) } : DEFAULT_SETTINGS;
+          } catch (e) {
+            return DEFAULT_SETTINGS;
+          }
+        });
+
+        const [text, setText] = useState("");
+        const [isStorageLoaded, setIsStorageLoaded] = useState(false);
+        const [isAnalyzing, setIsAnalyzing] = useState(false);
+        const [isSummarizing, setIsSummarizing] = useState(false);
+        const [results, setResults] = useState(null);
+        const [summaryData, setSummaryData] = useState(null);
+        const [activeTab, setActiveTab] = useState('all'); // 'all', 'grammar', 'style', 'summary'
+        const [error, setError] = useState("");
+        const [copied, setCopied] = useState(false);
+        const [sidebarOpen, setSidebarOpen] = useState(true);
+
+        // Floating Tooltip State
+        const [activeTooltip, setActiveTooltip] = useState(null);
+
+        const editorRef = useRef(null);
+        const autoCheckTimerRef = useRef(null);
+
+        // Load initial text from OPFS file system on mount
+        useEffect(() => {
+          loadFromOPFS().then((opfsText) => {
+            const initialContent = opfsText !== "" ? opfsText : 
+              "Her is a sample text with several errors. We is going to testing this grammar checker to see how it can improves your writing style, tone and clarity. Furthermore, the quick brown fox jumps over the lazy dog and this text is very repetitive and overly long.";
+            setText(initialContent);
+            setIsStorageLoaded(true);
+            if (editorRef.current) {
+              editorRef.current.innerText = initialContent;
+            }
+          });
+        }, []);
+
+        // Save settings to LocalStorage
+        useEffect(() => {
+          try {
+            localStorage.setItem('grammarcorrect_settings', JSON.stringify(settings));
+          } catch (e) {}
+        }, [settings]);
+
+        // Save text to OPFS whenever text changes
+        useEffect(() => {
+          if (isStorageLoaded) {
+            saveToOPFS(text);
+          }
+        }, [text, isStorageLoaded]);
+
+        // Dark Mode toggle
+        useEffect(() => {
+          if (settings.darkMode) {
+            document.documentElement.classList.add('dark');
+          } else {
+            document.documentElement.classList.remove('dark');
+          }
+        }, [settings.darkMode]);
+
+        const dynamicScore = useMemo(() => {
+          if (!results) return null;
+          const remainingCount = results.issues ? results.issues.length : 0;
+          if (remainingCount === 0) return 100;
+          
+          const initialTotal = results.initialIssuesCount || remainingCount;
+          const initialScore = results.initialScore !== undefined ? results.initialScore : (results.overallScore || 80);
+          
+          if (initialTotal <= 0) return 100;
+          
+          const fixedCount = Math.max(0, initialTotal - remainingCount);
+          const calculatedScore = Math.round(initialScore + (100 - initialScore) * (fixedCount / initialTotal));
+          return Math.min(100, Math.max(0, calculatedScore));
+        }, [results]);
+
+        const handleEditorInput = (e) => {
+          const plainText = e.currentTarget.innerText;
+          setText(plainText);
+          setActiveTooltip(null);
+
+          // Reset results if text is completely emptied
+          if (!plainText.trim()) {
+            setResults(null);
+            setSummaryData(null);
+          }
+
+          if (settings.autoCheck) {
+            if (autoCheckTimerRef.current) clearTimeout(autoCheckTimerRef.current);
+            autoCheckTimerRef.current = setTimeout(() => {
+              if (plainText.trim().length > 10) {
+                analyzeText(plainText);
+              }
+            }, 2500);
+          }
+        };
+
+        const analyzeText = async (overrideText = null) => {
+          const textToAnalyze = overrideText !== null ? overrideText : text;
+          
+          if (!textToAnalyze.trim()) {
+            setError("Please enter some text to analyze.");
+            return;
+          }
+
+          setIsAnalyzing(true);
+          setError("");
+          setActiveTooltip(null);
+
+          const keyToUse = API_KEY || settings.apiKey;
+          const selectedModel = settings.model || 'gemini-3.7-flash';
+          const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent?key=${keyToUse}`;
+
+          const systemInstruction = `You are a world-class proofreader and grammar editor (like Grammarly).
+Analyze the entire provided text comprehensively for spelling, grammar, punctuation, conciseness, and tone fit.
+Desired Writing Tone: ${settings.tone || 'Professional'}.
+
+Instructions:
+1. "originalText" MUST be an exact substring present in the input text.
+2. Provide precise, actionable "suggestion" replacements.
+3. Categorize into "grammar" (correctness, spelling, punctuation) or "style" (clarity, conciseness, tone).
+4. Be accurate, scan the entire text, and return all identified issues without missing any.
+
+Return ONLY a valid JSON object with this exact structure:
+{
+  "overallScore": number (0-100 score),
+  "summary": "1-2 sentence overview of writing quality",
+  "issues": [
+    {
+      "id": "unique-id-1",
+      "type": "grammar" or "style",
+      "originalText": "exact substring from input",
+      "suggestion": "replacement text",
+      "explanation": "clear 1-sentence reason",
+      "severity": "high" or "medium" or "low"
+    }
+  ]
+}`;
+
+          const payload = {
+            contents: [{
+              role: "user",
+              parts: [{ text: textToAnalyze }]
+            }],
+            systemInstruction: {
+              parts: [{ text: systemInstruction }]
+            },
+            generationConfig: {
+              responseMimeType: "application/json",
+              temperature: 0.1
+            }
+          };
+
+          try {
+            const response = await fetch(apiUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+              const errData = await response.json().catch(() => ({}));
+              throw new Error(errData.error?.message || `API Request failed (${response.status})`);
+            }
+
+            const data = await response.json();
+            
+            if (data.candidates && data.candidates[0]?.content?.parts?.[0]?.text) {
+              const rawJson = data.candidates[0].content.parts[0].text;
+              const parsedData = JSON.parse(rawJson);
+              
+              const processedIssues = processAndDeduplicateIssues(parsedData.issues, textToAnalyze);
+              
+              const finalResult = {
+                ...parsedData,
+                issues: processedIssues,
+                initialIssuesCount: processedIssues.length,
+                initialScore: parsedData.overallScore || 80
+              };
+
+              setResults(finalResult);
+              renderHighlights(textToAnalyze, processedIssues);
+            } else {
+              throw new Error("No response generated from AI.");
+            }
+          } catch (err) {
+            console.error("Analysis Error:", err);
+            setError(err.message || "Failed to analyze text. Please verify your connection or model settings.");
+          } finally {
+            setIsAnalyzing(false);
+          }
+        };
+
+        const generateSummary = async () => {
+          if (!text.trim()) {
+            setError("Please enter text to summarize.");
+            return;
+          }
+
+          setIsSummarizing(true);
+          setError("");
+          setActiveTab('summary');
+
+          const keyToUse = API_KEY || settings.apiKey;
+          const selectedModel = settings.model || 'gemini-3.7-flash';
+          const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent?key=${keyToUse}`;
+
+          const systemInstruction = `You are an expert executive editor. Summarize the user's text into clear insights.
+Return ONLY a valid JSON object with this exact structure:
+{
+  "executiveSummary": "2-3 sentence overall executive summary",
+  "keyTakeaways": ["Bullet point 1", "Bullet point 2", "Bullet point 3"],
+  "estimatedReadingTime": "X mins",
+  "sentiment": "Positive / Neutral / Professional / Direct"
+}`;
+
+          const payload = {
+            contents: [{
+              role: "user",
+              parts: [{ text: text }]
+            }],
+            systemInstruction: {
+              parts: [{ text: systemInstruction }]
+            },
+            generationConfig: {
+              responseMimeType: "application/json",
+              temperature: 0.2
+            }
+          };
+
+          try {
+            const response = await fetch(apiUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+              throw new Error(`Summary request failed (${response.status})`);
+            }
+
+            const data = await response.json();
+            if (data.candidates && data.candidates[0]?.content?.parts?.[0]?.text) {
+              const parsedSummary = JSON.parse(data.candidates[0].content.parts[0].text);
+              setSummaryData(parsedSummary);
+            }
+          } catch (err) {
+            console.error("Summary Error:", err);
+            setError(err.message || "Failed to generate summary.");
+          } finally {
+            setIsSummarizing(false);
+          }
+        };
+
+        const renderHighlights = (rawText, issuesList) => {
+          if (!editorRef.current) return;
+
+          if (!issuesList || issuesList.length === 0) {
+            editorRef.current.innerText = rawText;
+            return;
+          }
+
+          let htmlBuffer = "";
+          let currentIdx = 0;
+
+          issuesList.forEach((issue) => {
+            const textBefore = rawText.substring(currentIdx, issue.startIndex);
+            htmlBuffer += escapeHtml(textBefore);
+
+            let typeClass = issue.type === 'grammar' 
+              ? (issue.severity === 'high' ? 'type-grammar' : 'type-warning') 
+              : 'type-style';
+
+            const highlightedSpan = rawText.substring(issue.startIndex, issue.endIndex);
+            
+            htmlBuffer += `<span class="issue-highlight ${typeClass}" data-issue-id="${issue.id}">${escapeHtml(highlightedSpan)}</span>`;
+
+            currentIdx = issue.endIndex;
+          });
+
+          htmlBuffer += escapeHtml(rawText.substring(currentIdx));
+          editorRef.current.innerHTML = htmlBuffer;
+        };
+
+        const escapeHtml = (str) => {
+          return str
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;");
+        };
+
+        const handleEditorClick = (e) => {
+          const targetSpan = e.target.closest('.issue-highlight');
+          if (targetSpan && results && results.issues) {
+            const issueId = targetSpan.getAttribute('data-issue-id');
+            const issue = results.issues.find(i => i.id === issueId);
+            
+            if (issue) {
+              const rect = targetSpan.getBoundingClientRect();
+              document.querySelectorAll('.issue-highlight').forEach(el => el.classList.remove('active-target'));
+              targetSpan.classList.add('active-target');
+
+              setActiveTooltip({
+                issueId,
+                issue,
+                top: rect.bottom + window.scrollY + 6,
+                left: Math.min(Math.max(rect.left + window.scrollX, 16), window.innerWidth - 320)
+              });
+              return;
+            }
+          }
+          
+          document.querySelectorAll('.issue-highlight').forEach(el => el.classList.remove('active-target'));
+          setActiveTooltip(null);
+        };
+
+        const acceptSuggestion = (issueId) => {
+          if (!results) return;
+
+          const targetIssue = results.issues.find(i => i.id === issueId);
+          if (!targetIssue) return;
+
+          const before = text.substring(0, targetIssue.startIndex);
+          const after = text.substring(targetIssue.endIndex);
+          const newFullText = before + targetIssue.suggestion + after;
+
+          const offsetDelta = targetIssue.suggestion.length - (targetIssue.endIndex - targetIssue.startIndex);
+
+          setText(newFullText);
+
+          const remainingIssues = results.issues
+            .filter(i => i.id !== issueId)
+            .map(i => {
+              if (i.startIndex > targetIssue.startIndex) {
+                return {
+                  ...i,
+                  startIndex: i.startIndex + offsetDelta,
+                  endIndex: i.endIndex + offsetDelta
+                };
+              }
+              return i;
+            });
+
+          setResults({
+            ...results,
+            issues: remainingIssues
+          });
+
+          setActiveTooltip(null);
+          renderHighlights(newFullText, remainingIssues);
+        };
+
+        const dismissIssue = (issueId) => {
+          if (!results) return;
+
+          const remainingIssues = results.issues.filter(i => i.id !== issueId);
+          setResults({
+            ...results,
+            issues: remainingIssues
+          });
+
+          setActiveTooltip(null);
+          renderHighlights(text, remainingIssues);
+        };
+
+        const acceptAllFiltered = () => {
+          if (!results || !results.issues || results.issues.length === 0) return;
+
+          const issuesToApply = results.issues.filter(i => {
+            if (activeTab === 'grammar') return i.type === 'grammar';
+            if (activeTab === 'style') return i.type === 'style';
+            return true;
+          });
+
+          if (issuesToApply.length === 0) return;
+
+          const sortedDesc = [...issuesToApply].sort((a, b) => b.startIndex - a.startIndex);
+          
+          let currentText = text;
+          const appliedIds = new Set();
+
+          sortedDesc.forEach(issue => {
+            const before = currentText.substring(0, issue.startIndex);
+            const after = currentText.substring(issue.endIndex);
+            currentText = before + issue.suggestion + after;
+            appliedIds.add(issue.id);
+          });
+
+          setText(currentText);
+
+          const remaining = results.issues.filter(i => !appliedIds.has(i.id));
+          const reProcessed = processAndDeduplicateIssues(remaining, currentText);
+
+          setResults({
+            ...results,
+            issues: reProcessed
+          });
+
+          setActiveTooltip(null);
+          renderHighlights(currentText, reProcessed);
+        };
+
+        const clearText = () => {
+          setText("");
+          setResults(null);
+          setSummaryData(null);
+          setActiveTooltip(null);
+          if (editorRef.current) editorRef.current.innerText = "";
+        };
+
+        const copyTextToClipboard = () => {
+          const plain = editorRef.current ? editorRef.current.innerText : text;
+          navigator.clipboard.writeText(plain).then(() => {
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+          });
+        };
+
+        const scrollToIssueInEditor = (issue) => {
+          if (!editorRef.current) return;
+          
+          const el = editorRef.current.querySelector(`[data-issue-id="${issue.id}"]`);
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            document.querySelectorAll('.issue-highlight').forEach(span => span.classList.remove('active-target'));
+            el.classList.add('active-target');
+
+            try {
+              const selection = window.getSelection();
+              const range = document.createRange();
+              range.selectNodeContents(el);
+              selection.removeAllRanges();
+              selection.addRange(range);
+            } catch (e) {}
+
+            const rect = el.getBoundingClientRect();
+            setActiveTooltip({
+              issueId: issue.id,
+              issue,
+              top: rect.bottom + window.scrollY + 6,
+              left: Math.min(Math.max(rect.left + window.scrollX, 16), window.innerWidth - 320)
+            });
+          }
+        };
+
+        const metrics = useMemo(() => {
+          const cleanText = text.trim();
+          if (!cleanText) {
+            return { words: 0, chars: 0, readingTime: 0, total: 0, grammar: 0, style: 0 };
+          }
+
+          const words = cleanText.split(/\s+/).filter(w => w.length > 0).length;
+          const chars = text.length;
+          const readingTime = Math.max(1, Math.ceil(words / 200));
+
+          if (!results || !results.issues) {
+            return { words, chars, readingTime, total: 0, grammar: 0, style: 0 };
+          }
+
+          return {
+            words,
+            chars,
+            readingTime,
+            total: results.issues.length,
+            grammar: results.issues.filter(i => i.type === 'grammar').length,
+            style: results.issues.filter(i => i.type === 'style').length,
+          };
+        }, [text, results]);
+
+        const filteredIssues = useMemo(() => {
+          if (!results || !results.issues) return [];
+          return results.issues.filter(issue => {
+            if (activeTab === 'all') return true;
+            if (activeTab === 'grammar') return issue.type === 'grammar';
+            if (activeTab === 'style') return issue.type === 'style';
+            return true;
+          });
+        }, [results, activeTab]);
+
+        return (
+          <div className="flex flex-col h-screen w-screen overflow-hidden bg-gray-50 dark:bg-gray-900">
+            
+            {/* Header Bar */}
+            <header className="h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 sm:px-6 flex justify-between items-center shadow-xs z-30 shrink-0">
+              <div className="flex items-center space-x-3">
+                <div className="bg-indigo-600 dark:bg-indigo-500 text-white p-2.5 rounded-xl shadow-xs flex items-center justify-center">
+                  <img src="https://icons.getbootstrap.com/assets/icons/spellcheck.svg" className="h-5 w-5 filter invert" alt="GrammarCorrect Icon" />
+                </div>
+                <div>
+                  <h1 className="text-lg font-extrabold text-gray-900 dark:text-white tracking-tight">
+                    GrammarCorrect
+                  </h1>
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-2 sm:space-x-3">
+                
+                {/* Tone Picker */}
+                <div className="hidden lg:flex items-center space-x-1 bg-gray-100 dark:bg-gray-700/60 p-1 rounded-lg text-xs">
+                  <span className="px-2 text-gray-500 dark:text-gray-400 font-medium">Tone:</span>
+                  {['Professional', 'Casual', 'Academic', 'Creative'].map(t => (
+                    <button
+                      key={t}
+                      onClick={() => setSettings(s => ({ ...s, tone: t }))}
+                      className={`px-2 py-1 rounded-md transition-all font-medium ${
+                        settings.tone === t 
+                          ? 'bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 shadow-xs' 
+                          : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
+                      }`}
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Model Selector with Left Chevron Icon */}
+                <div className="relative inline-flex items-center hidden sm:flex">
+                  <div className="absolute left-2.5 pointer-events-none text-gray-500 dark:text-gray-400">
+                    <Icons.ChevronDown className="h-3.5 w-3.5" />
+                  </div>
+                  <select 
+                    value={settings.model}
+                    onChange={(e) => setSettings(s => ({ ...s, model: e.target.value }))}
+                    className="pl-7 pr-3 py-1.5 bg-gray-100 dark:bg-gray-700/80 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-600 rounded-lg text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer appearance-none"
+                  >
+                    <optgroup label="Google Gemini Models">
+                      <option value="gemini-3.7-flash">Gemini 3.7 Flash</option>
+                      <option value="gemini-3.6-flash">Gemini 3.6 Flash</option>
+                      <option value="gemini-3.5-flash">Gemini 3.5 Flash</option>
+                      <option value="gemini-3.5-flash-lite">Gemini 3.5 Flash-Lite</option>
+                      <option value="gemini-3.1-pro-preview">Gemini 3.1 Pro (Preview)</option>
+                      <option value="gemini-3.1-flash-lite">Gemini 3.1 Flash-Lite</option>
+                    </optgroup>
+                    <optgroup label="Google Gemma Models (AI Studio)">
+                      <option value="gemma-4-31b-it">Gemma 4 31B Instruct</option>
+                      <option value="gemma-4-12b-it">Gemma 4 12B Instruct</option>
+                      <option value="gemma-3-27b-it">Gemma 3 27B Instruct</option>
+                      <option value="gemma-3-4b-it">Gemma 3 4B Instruct</option>
+                      <option value="gemma-2-27b-it">Gemma 2 27B Instruct</option>
+                    </optgroup>
+                  </select>
+                </div>
+
+                {!API_KEY && (
+                  <input 
+                    type="password" 
+                    placeholder="API Key..." 
+                    value={settings.apiKey}
+                    onChange={(e) => setSettings(s => ({ ...s, apiKey: e.target.value }))}
+                    className="text-xs border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 w-28 hidden xl:block"
+                  />
+                )}
+
+                <button 
+                  onClick={() => setSettings(s => ({ ...s, darkMode: !s.darkMode }))}
+                  className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                  title="Toggle Dark/Light Mode"
+                >
+                  {settings.darkMode ? <Icons.Sun /> : <Icons.Moon />}
+                </button>
+
+                <button
+                  onClick={() => setSidebarOpen(!sidebarOpen)}
+                  className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors lg:hidden"
+                  title="Toggle Sidebar"
+                >
+                  <Icons.SidebarToggle />
+                </button>
+
+                <button 
+                  onClick={() => analyzeText()}
+                  disabled={isAnalyzing || text.trim().length === 0}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-white text-xs sm:text-sm shadow-xs transition-all ${
+                    isAnalyzing || text.trim().length === 0 
+                      ? 'bg-indigo-400 dark:bg-indigo-600/50 cursor-not-allowed' 
+                      : 'bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 hover:shadow-md'
+                  }`}
+                >
+                  {isAnalyzing ? (
+                    <>
+                      <Icons.Loading />
+                      <span>Scanning...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Icons.Sparkles />
+                      <span>Scan Text</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </header>
+
+            {/* Main Layout Workspace */}
+            <div className="flex-1 flex overflow-hidden relative">
+              
+              {/* Editor Workspace (Left) */}
+              <div className="flex-1 flex flex-col min-w-0 bg-white dark:bg-gray-900 relative">
+                
+                {/* Metric Header Bar */}
+                <div className="h-11 px-6 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/40 flex justify-between items-center text-xs text-gray-500 dark:text-gray-400 shrink-0">
+                  <div className="flex items-center space-x-4">
+                    <span><strong>{metrics.words}</strong> words</span>
+                    <span>•</span>
+                    <span><strong>{metrics.chars}</strong> chars</span>
+                    <span>•</span>
+                    <span><strong>{metrics.readingTime}</strong> min read</span>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    {results && results.issues && results.issues.length > 0 && (
+                      <button
+                        onClick={acceptAllFiltered}
+                        className="flex items-center gap-1.5 px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded-md transition-colors font-medium text-xs shadow-2xs"
+                        title="Correct all identified grammar & style issues"
+                      >
+                        <Icons.CheckDouble />
+                        <span>Correct All</span>
+                      </button>
+                    )}
+
+                    <button
+                      onClick={generateSummary}
+                      disabled={isSummarizing || !text.trim()}
+                      className="flex items-center gap-1.5 px-2.5 py-1 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 rounded-md transition-colors font-medium"
+                      title="Generate AI Text Summary"
+                    >
+                      <Icons.DocumentText />
+                      <span>{isSummarizing ? 'Summarizing...' : 'Summarize'}</span>
+                    </button>
+
+                    <button 
+                      onClick={copyTextToClipboard}
+                      className="flex items-center gap-1.5 px-2.5 py-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-md transition-colors text-gray-600 dark:text-gray-300"
+                      title="Copy text"
+                    >
+                      <Icons.Copy />
+                      <span>{copied ? 'Copied!' : 'Copy'}</span>
+                    </button>
+
+                    <button 
+                      onClick={clearText}
+                      className="flex items-center gap-1.5 px-2.5 py-1 hover:bg-red-50 dark:hover:bg-red-950/40 hover:text-red-600 dark:hover:text-red-400 rounded-md transition-colors text-gray-600 dark:text-gray-300"
+                      title="Clear editor text"
+                    >
+                      <Icons.Trash />
+                      <span>Clear</span>
+                    </button>
+                  </div>
+                </div>
+
+                {error && (
+                  <div className="m-4 bg-red-50 dark:bg-red-950/50 border-l-4 border-red-500 p-3 rounded-r-lg flex justify-between items-center text-xs text-red-700 dark:text-red-300 shrink-0">
+                    <span>{error}</span>
+                    <button onClick={() => setError("")} className="hover:text-red-900 dark:hover:text-red-100">
+                      <Icons.Close />
+                    </button>
+                  </div>
+                )}
+
+                {/* Text Canvas */}
+                <div className="flex-1 p-6 md:p-10 overflow-y-auto custom-scrollbar relative" onClick={handleEditorClick}>
+                  <div 
+                    id="editor-content"
+                    ref={editorRef}
+                    contentEditable="true"
+                    onInput={handleEditorInput}
+                    placeholder="Type, paste, or draft text here. GrammarCorrect will automatically analyze your entire document..."
+                    className="w-full max-w-4xl mx-auto text-lg leading-relaxed text-gray-800 dark:text-gray-100 outline-none"
+                    spellCheck="false"
+                  ></div>
+                </div>
+
+                {/* Popover Inline Tooltip */}
+                {activeTooltip && (
+                  <div 
+                    style={{ 
+                      position: 'fixed', 
+                      top: `${activeTooltip.top}px`, 
+                      left: `${activeTooltip.left}px`,
+                      zIndex: 50
+                    }}
+                    className="w-80 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 p-4 animate-pop-in text-xs"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className={`px-2 py-0.5 rounded-full font-bold uppercase text-[10px] tracking-wider ${
+                        activeTooltip.issue.type === 'grammar' 
+                          ? 'bg-red-100 dark:bg-red-950/80 text-red-700 dark:text-red-300' 
+                          : 'bg-indigo-100 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300'
+                      }`}>
+                        {activeTooltip.issue.type === 'grammar' ? 'Grammar & Spelling' : 'Style & Tone'}
+                      </span>
+                      <button 
+                        onClick={() => setActiveTooltip(null)} 
+                        className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                      >
+                        <Icons.Close />
+                      </button>
+                    </div>
+
+                    <div className="mb-3">
+                      <div className="text-gray-400 dark:text-gray-500 line-through mb-1 font-mono">
+                        "{activeTooltip.issue.originalText}"
+                      </div>
+                      <div className="flex items-center text-sm font-semibold text-green-600 dark:text-green-400 gap-1.5">
+                        <Icons.ArrowRight />
+                        <span>"{activeTooltip.issue.suggestion}"</span>
+                      </div>
+                    </div>
+
+                    <p className="text-gray-600 dark:text-gray-300 mb-3 bg-gray-50 dark:bg-gray-900/60 p-2.5 rounded-lg border border-gray-100 dark:border-gray-700/50 leading-relaxed">
+                      {activeTooltip.issue.explanation}
+                    </p>
+
+                    <div className="flex gap-2 pt-1">
+                      <button 
+                        onClick={() => acceptSuggestion(activeTooltip.issueId)}
+                        className="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium py-1.5 px-3 rounded-lg flex items-center justify-center gap-1 transition-colors shadow-xs"
+                      >
+                        <Icons.Check />
+                        <span>Apply Fix</span>
+                      </button>
+                      <button 
+                        onClick={() => dismissIssue(activeTooltip.issueId)}
+                        className="px-3 py-1.5 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 font-medium rounded-lg transition-colors"
+                      >
+                        Ignore
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+              </div>
+
+              {/* Sidebar (Right) */}
+              <div className={`w-96 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 flex flex-col h-full shadow-lg z-20 shrink-0 transition-all duration-200 ${
+                sidebarOpen ? 'translate-x-0' : 'translate-x-full absolute right-0 lg:relative lg:translate-x-0'
+              }`}>
+                
+                {/* Score & Summary Card with Dynamic Rating */}
+                <div className="p-5 border-b border-gray-200 dark:border-gray-700 bg-gray-50/70 dark:bg-gray-800/60 flex items-center justify-between shrink-0">
+                  <div className="space-y-1">
+                    <h2 className="text-xs font-bold text-gray-400 dark:text-gray-400 uppercase tracking-wider">Document Rating</h2>
+                    <p className="text-xs text-gray-600 dark:text-gray-300 max-w-[200px] leading-snug">
+                      {results 
+                        ? (dynamicScore === 100 ? "Your text is clean, clear, and ready to publish!" : results.summary) 
+                        : "Scan your full text to review accuracy and tone quality."
+                      }
+                    </p>
+                  </div>
+
+                  <div className="relative h-14 w-14 flex items-center justify-center shrink-0">
+                    <svg className="h-full w-full transform -rotate-90" viewBox="0 0 36 36">
+                      <path
+                        className="text-gray-200 dark:text-gray-700"
+                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="3.5"
+                      />
+                      {dynamicScore !== null && (
+                        <path
+                          className={`transition-all duration-500 ${dynamicScore > 80 ? 'text-green-500' : dynamicScore > 60 ? 'text-amber-500' : 'text-red-500'}`}
+                          strokeDasharray={`${dynamicScore}, 100`}
+                          d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="3.5"
+                          strokeLinecap="round"
+                        />
+                      )}
+                    </svg>
+                    <span className="absolute text-base font-extrabold text-gray-800 dark:text-gray-100">
+                      {dynamicScore !== null ? dynamicScore : '--'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Tab Navigation */}
+                <div className="flex border-b border-gray-200 dark:border-gray-700 shrink-0 text-xs font-semibold">
+                  <button 
+                    onClick={() => setActiveTab('all')}
+                    className={`flex-1 py-3 border-b-2 text-center transition-colors ${
+                      activeTab === 'all' 
+                        ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400 font-bold' 
+                        : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                    }`}
+                  >
+                    All <span className="ml-1 px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-[10px]">{metrics.total}</span>
+                  </button>
+                  <button 
+                    onClick={() => setActiveTab('grammar')}
+                    className={`flex-1 py-3 border-b-2 text-center transition-colors ${
+                      activeTab === 'grammar' 
+                        ? 'border-red-500 text-red-600 dark:text-red-400 font-bold' 
+                        : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                    }`}
+                  >
+                    Grammar <span className="ml-1 px-1.5 py-0.5 rounded-full bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-400 text-[10px]">{metrics.grammar}</span>
+                  </button>
+                  <button 
+                    onClick={() => setActiveTab('style')}
+                    className={`flex-1 py-3 border-b-2 text-center transition-colors ${
+                      activeTab === 'style' 
+                        ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400 font-bold' 
+                        : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                    }`}
+                  >
+                    Style <span className="ml-1 px-1.5 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 text-[10px]">{metrics.style}</span>
+                  </button>
+                  <button 
+                    onClick={() => setActiveTab('summary')}
+                    className={`flex-1 py-3 border-b-2 text-center transition-colors ${
+                      activeTab === 'summary' 
+                        ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400 font-bold' 
+                        : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                    }`}
+                  >
+                    Summary
+                  </button>
+                </div>
+
+                {/* Tab Panel List */}
+                <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-3 min-h-0 bg-gray-50/50 dark:bg-gray-900/40">
+                  
+                  {activeTab === 'summary' ? (
+                    <div className="space-y-4">
+                      {!summaryData ? (
+                        <div className="flex flex-col items-center justify-center h-64 text-center p-6 space-y-3">
+                          <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 rounded-full text-emerald-500">
+                            <Icons.DocumentText />
+                          </div>
+                          <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200">No Summary Generated</h3>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">Click the button below to generate a comprehensive AI summary of your text.</p>
+                          <button
+                            onClick={generateSummary}
+                            disabled={isSummarizing || !text.trim()}
+                            className="mt-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shadow-xs transition-colors"
+                          >
+                            {isSummarizing ? 'Generating Summary...' : 'Summarize Document'}
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="space-y-4 text-xs">
+                          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 shadow-2xs">
+                            <h3 className="font-bold text-gray-900 dark:text-white mb-2 uppercase tracking-wider text-[10px] text-indigo-500">Executive Summary</h3>
+                            <p className="text-gray-700 dark:text-gray-300 leading-relaxed font-medium">
+                              {summaryData.executiveSummary}
+                            </p>
+                          </div>
+
+                          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 shadow-2xs">
+                            <h3 className="font-bold text-gray-900 dark:text-white mb-2 uppercase tracking-wider text-[10px] text-indigo-500">Key Takeaways</h3>
+                            <ul className="space-y-2">
+                              {summaryData.keyTakeaways?.map((item, idx) => (
+                                <li key={idx} className="flex items-start gap-2 text-gray-700 dark:text-gray-300">
+                                  <span className="text-indigo-500 font-bold">•</span>
+                                  <span>{item}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-center">
+                              <span className="text-[10px] font-bold text-gray-400 uppercase">Est. Read Time</span>
+                              <div className="text-sm font-extrabold text-gray-800 dark:text-gray-100 mt-0.5">
+                                {summaryData.estimatedReadingTime}
+                              </div>
+                            </div>
+                            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-center">
+                              <span className="text-[10px] font-bold text-gray-400 uppercase">Tone Analysis</span>
+                              <div className="text-sm font-extrabold text-indigo-600 dark:text-indigo-400 mt-0.5">
+                                {summaryData.sentiment}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <>
+                      {filteredIssues.length > 0 && (
+                        <div className="flex justify-between items-center pb-2 px-1">
+                          <span className="text-[11px] font-bold text-gray-400 dark:text-gray-400 uppercase tracking-wider">
+                            {filteredIssues.length} {filteredIssues.length === 1 ? 'Alert' : 'Alerts'}
+                          </span>
+                          
+                          <button 
+                            onClick={acceptAllFiltered}
+                            className="text-xs text-white bg-green-600 hover:bg-green-700 font-semibold flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-colors shadow-2xs"
+                          >
+                            <Icons.CheckDouble />
+                            <span>Correct All</span>
+                          </button>
+                        </div>
+                      )}
+
+                      {!results ? (
+                        <div className="flex flex-col items-center justify-center h-64 text-gray-400 dark:text-gray-500 text-center p-6 space-y-3">
+                          <div className="p-3 bg-indigo-50 dark:bg-indigo-950/40 rounded-full text-indigo-500">
+                            <Icons.Wand />
+                          </div>
+                          <p className="text-xs leading-relaxed">Click "Scan Text" above to proofread your content for grammar, spelling, and tone consistency.</p>
+                        </div>
+                      ) : filteredIssues.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center h-64 text-center p-6 space-y-2">
+                          <div className="p-3 bg-green-50 dark:bg-green-950/40 rounded-full text-green-500">
+                            <Icons.Check className="h-6 w-6" />
+                          </div>
+                          <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200">No issues found</h3>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">Your text is clean, clear, and ready to send!</p>
+                        </div>
+                      ) : (
+                        filteredIssues.map((issue) => (
+                          <div 
+                            key={issue.id} 
+                            onClick={() => scrollToIssueInEditor(issue)}
+                            className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700/80 rounded-xl p-3.5 shadow-2xs hover:shadow-md transition-all cursor-pointer group hover:border-indigo-300 dark:hover:border-indigo-600"
+                          >
+                            <div className="flex items-center justify-between mb-2">
+                              <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                                issue.type === 'grammar' 
+                                  ? 'bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-400' 
+                                  : 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400'
+                              }`}>
+                                {issue.type === 'grammar' ? 'Grammar' : 'Style'}
+                              </span>
+
+                              <span className="text-[10px] text-gray-400 dark:text-gray-500 group-hover:text-indigo-500 font-semibold transition-colors">
+                                Jump to word →
+                              </span>
+                            </div>
+
+                            <div className="text-xs text-gray-400 dark:text-gray-500 line-through mb-1 font-mono bg-gray-50 dark:bg-gray-900/60 p-1.5 rounded">
+                              "{issue.originalText}"
+                            </div>
+
+                            <div className="text-sm font-semibold text-green-600 dark:text-green-400 mb-2 flex items-center gap-1.5">
+                              <Icons.ArrowRight />
+                              <span>"{issue.suggestion}"</span>
+                            </div>
+
+                            <p className="text-xs text-gray-600 dark:text-gray-300 mb-3 leading-snug">
+                              {issue.explanation}
+                            </p>
+
+                            <div className="flex space-x-2 pt-2 border-t border-gray-100 dark:border-gray-700/60">
+                              <button 
+                                onClick={(e) => { e.stopPropagation(); acceptSuggestion(issue.id); }}
+                                className="flex-1 bg-green-600 hover:bg-green-700 text-white font-medium py-1.5 rounded-lg text-xs transition-colors flex items-center justify-center gap-1"
+                              >
+                                <Icons.Check />
+                                <span>Accept</span>
+                              </button>
+                              <button 
+                                onClick={(e) => { e.stopPropagation(); dismissIssue(issue.id); }}
+                                className="px-3 py-1.5 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 font-medium rounded-lg text-xs transition-colors"
+                              >
+                                Dismiss
+                              </button>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </>
+                  )}
+                </div>
+
+                {/* Sidebar Footer */}
+                <div className="p-3 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-center text-[11px] text-gray-400 dark:text-gray-500 shrink-0 font-medium">
+                  Engine: <span className="font-semibold text-indigo-500">{settings.model}</span>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        );
+      };
+
+      const root = ReactDOM.createRoot(document.getElementById('root'));
+      root.render(<App />);
+    </script>
+  </body>
+</html>
