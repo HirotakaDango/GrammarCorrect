@@ -39,7 +39,7 @@
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
     <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     
@@ -434,6 +434,35 @@
           }
         }, [settings.darkMode]);
 
+        // Precise boundary calculation for popover tooltips preventing cutoff
+        const calculateTooltipPos = (rect) => {
+          const margin = 12;
+          const tooltipWidth = Math.min(320, window.innerWidth - (margin * 2));
+          const estimatedHeight = 230; // Maximum typical height of tooltip card
+
+          // Viewport-relative horizontal positioning
+          let left = rect.left;
+          if (left + tooltipWidth > window.innerWidth - margin) {
+            left = window.innerWidth - tooltipWidth - margin;
+          }
+          if (left < margin) {
+            left = margin;
+          }
+
+          // Viewport-relative vertical positioning
+          let top = rect.bottom + 8;
+          // If placing below exceeds screen bottom, place it above target span
+          if (top + estimatedHeight > window.innerHeight - margin) {
+            if (rect.top - estimatedHeight - 8 >= margin) {
+              top = rect.top - estimatedHeight - 8;
+            } else {
+              top = Math.max(margin, window.innerHeight - estimatedHeight - margin);
+            }
+          }
+
+          return { top, left };
+        };
+
         const dynamicScore = useMemo(() => {
           if (!results) return null;
           const remainingCount = results.issues ? results.issues.length : 0;
@@ -670,15 +699,31 @@ Return ONLY a valid JSON object with this exact structure:
               document.querySelectorAll('.issue-highlight').forEach(el => el.classList.remove('active-target'));
               targetSpan.classList.add('active-target');
 
-              const tooltipWidth = Math.min(320, window.innerWidth - 32);
-              const leftPos = Math.min(Math.max(rect.left + window.scrollX, 16), window.innerWidth - tooltipWidth - 16);
+              const { top, left } = calculateTooltipPos(rect);
 
               setActiveTooltip({
                 issueId,
                 issue,
-                top: rect.bottom + window.scrollY + 6,
-                left: leftPos
+                top,
+                left
               });
+
+              // Automatically switch to 'all' tab and ensure sidebar is opened
+              setActiveTab('all');
+              setSidebarOpen(true);
+
+              // Scroll to and highlight corresponding card in sidebar drawer
+              setTimeout(() => {
+                const cardEl = document.getElementById(`issue-card-${issueId}`);
+                if (cardEl) {
+                  cardEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                  cardEl.classList.add('ring-2', 'ring-indigo-500', 'bg-indigo-50/50', 'dark:bg-indigo-950/40');
+                  setTimeout(() => {
+                    cardEl.classList.remove('ring-2', 'ring-indigo-500', 'bg-indigo-50/50', 'dark:bg-indigo-950/40');
+                  }, 1600);
+                }
+              }, 60);
+
               return;
             }
           }
@@ -807,16 +852,17 @@ Return ONLY a valid JSON object with this exact structure:
               selection.addRange(range);
             } catch (e) {}
 
-            const rect = el.getBoundingClientRect();
-            const tooltipWidth = Math.min(320, window.innerWidth - 32);
-            const leftPos = Math.min(Math.max(rect.left + window.scrollX, 16), window.innerWidth - tooltipWidth - 16);
+            setTimeout(() => {
+              const rect = el.getBoundingClientRect();
+              const { top, left } = calculateTooltipPos(rect);
 
-            setActiveTooltip({
-              issueId: issue.id,
-              issue,
-              top: rect.bottom + window.scrollY + 6,
-              left: leftPos
-            });
+              setActiveTooltip({
+                issueId: issue.id,
+                issue,
+                top,
+                left
+              });
+            }, 120);
 
             // Auto dismiss mobile drawer when jumping to word
             if (window.innerWidth < 1024) {
@@ -1034,7 +1080,11 @@ Return ONLY a valid JSON object with this exact structure:
                 )}
 
                 {/* Text Canvas */}
-                <div className="flex-1 p-4 sm:p-6 md:p-10 overflow-y-auto custom-scrollbar relative" onClick={handleEditorClick}>
+                <div 
+                  className="flex-1 p-4 sm:p-6 md:p-10 overflow-y-auto custom-scrollbar relative" 
+                  onClick={handleEditorClick}
+                  onScroll={() => { if (activeTooltip) setActiveTooltip(null); }}
+                >
                   <div 
                     id="editor-content"
                     ref={editorRef}
@@ -1046,7 +1096,7 @@ Return ONLY a valid JSON object with this exact structure:
                   ></div>
                 </div>
 
-                {/* Popover Inline Tooltip */}
+                {/* Popover Inline Tooltip - Bound-safe & Cutoff Protected */}
                 {activeTooltip && (
                   <div 
                     style={{ 
@@ -1055,7 +1105,7 @@ Return ONLY a valid JSON object with this exact structure:
                       left: `${activeTooltip.left}px`,
                       zIndex: 60
                     }}
-                    className="w-[calc(100vw-32px)] max-w-[320px] bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 p-3.5 sm:p-4 animate-pop-in text-xs"
+                    className="w-[calc(100vw-24px)] max-w-[320px] max-h-[85vh] overflow-y-auto custom-scrollbar bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 p-3.5 sm:p-4 animate-pop-in text-xs"
                   >
                     <div className="flex items-center justify-between mb-2">
                       <span className={`px-2 py-0.5 rounded-full font-bold uppercase text-[10px] tracking-wider ${
@@ -1067,7 +1117,7 @@ Return ONLY a valid JSON object with this exact structure:
                       </span>
                       <button 
                         onClick={() => setActiveTooltip(null)} 
-                        className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                        className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-0.5"
                       >
                         <Icons.Close />
                       </button>
@@ -1388,6 +1438,7 @@ Return ONLY a valid JSON object with this exact structure:
                       ) : (
                         filteredIssues.map((issue) => (
                           <div 
+                            id={`issue-card-${issue.id}`}
                             key={issue.id} 
                             onClick={() => scrollToIssueInEditor(issue)}
                             className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700/80 rounded-xl p-3 sm:p-3.5 shadow-2xs hover:shadow-md transition-all cursor-pointer group hover:border-indigo-300 dark:hover:border-indigo-600"
@@ -1455,5 +1506,5 @@ Return ONLY a valid JSON object with this exact structure:
       const root = ReactDOM.createRoot(document.getElementById('root'));
       root.render(<App />);
     </script>
-  <script src="https://replit-cdn.com/replit-pill/replit-pill.global.js" data-referral-code="r1h5un0351j1" data-repl-id="438fc542-1f41-4c89-8e71-a01f72feb76c"></script></body>
+  </body>
 </html>
